@@ -1,138 +1,112 @@
-# 数学计算 MCP 服务器
+# Math_MCPS 项目文件描述
 
-这是一个专门用于数学计算的 (MCP) 服务器。
+## 项目概述
 
-## 功能特性
+Math_MCPS 是一个基于 Model Context Protocol (MCP) 的数学计算服务器，提供丰富的数学计算功能，包括基础运算、高级数学函数、统计学工具、数学常量资源和复杂算式处理能力。
 
-### 1. 基础数学运算
+## 文件结构
 
-- `add(a, b)` - 加法运算
-- `subtract(a, b)` - 减法运算
-- `multiply(a, b)` - 乘法运算
-- `divide(a, b)` - 除法运算
-
-### 2. 高级数学运算
-
-- `power(base, exponent)` - 幂运算
-- `sqrt(number)` - 平方根
-- `cbrt(number)` - 立方根
-- `log(number, base)` - 对数（默认自然对数）
-- `ln(number)` - 自然对数
-- `exp(number)` - 指数函数 e^x
-- `sin(angle)`, `cos(angle)`, `tan(angle)` - 三角函数（角度制）
-- `asin(value)`, `acos(value)`, `atan(value)` - 反三角函数（角度制）
-- `factorial(n)` - 阶乘
-- `combination(n, r)` - 组合数 C(n, r)
-- `permutation(n, r)` - 排列数 P(n, r)
-
-### 3. 统计学工具
-
-- `mean(numbers)` - 计算平均值
-- `median(numbers)` - 计算中位数
-- `mode(numbers)` - 计算众数
-- `variance(numbers)` - 计算方差
-- `standard_deviation(numbers)` - 计算标准差
-
-### 4. 数学常量资源
-
-可以通过 `math:constant/{name}` 访问：
-
-- `pi` - 圆周率 π
-- `e` - 自然常数 e
-- `golden_ratio` - 黄金比例 φ
-- `sqrt_2` - 根号2 √2
-
-### 5. 提示生成器
-
-- `solve_equation` - 生成解方程的提示
-- `prove_theorem` - 生成证明数学定理的提示
-- `create_graph` - 生成创建图形的提示
-
-### 6. 单位转换
-
-- `angle_convert(angle, from_unit, to_unit)` - 角度单位转换（degree/radian）
-
-## 使用方法
-
-### 1. 安装依赖
-
-```bash
-pip install mcp[cli]
+```
+Math_MCPS/
+├── .gitignore              # Git 忽略文件配置
+├── .python-version        # Python 版本要求 (>=3.12)
+├── main.py                # 主程序文件，包含所有数学工具和资源
+├── pyproject.toml         # 项目配置文件，定义依赖和元数据
+├── README.md              # 项目文档，包含功能介绍和使用方法
+├── uv.lock                # UV 依赖锁定文件
+└── cute_message.txt       # 示例文件，包含可爱消息
 ```
 
-### 2. 运行服务器
+## 核心文件详解
 
-```bash
-python main.py
-```
+### 1. main.py - 主程序文件
 
-### 3. 使用工具示例
+**功能**：实现所有数学计算工具和资源的核心代码
 
-在 MCP 客户端中，您可以调用这些工具：
+**主要组件**：
+- **基础数学运算**：加、减、乘、除
+- **高级数学运算**：幂运算、根运算、对数、指数、三角函数、反三角函数
+- **组合数学**：阶乘、组合数、排列数
+- **统计学工具**：平均值、中位数、众数、方差、标准差
+- **数学常量资源**：π、e、黄金比例、根号2
+- **复杂算式处理**：表达式计算、表达式简化
+- **提示生成器**：解方程、证明定理、创建图形的提示模板
+- **单位转换**：角度单位转换
 
-```python
-# 基础运算
-result = await client.call_tool("add", {"a": 10, "b": 5})
+**技术特点**：
+- 使用 FastMCP 框架构建服务器
+- 支持类型提示，提高代码可读性
+- 包含完整的错误处理机制
+- 安全的数学表达式计算
 
-# 高级运算
-result = await client.call_tool("power", {"base": 2, "exponent": 10})
+### 2. pyproject.toml - 项目配置文件
 
-# 统计计算
-result = await client.call_tool("mean", {"numbers": [1, 2, 3, 4, 5]})
+**功能**：定义项目元数据和依赖关系
 
-# 获取数学常量
-result = await client.call_resource("math:constant/pi", {})
-```
+**关键配置**：
+- 项目名称：math
+- 版本：0.1.0
+- Python 版本要求：>=3.12
+- 主要依赖：mcp[cli]>=1.26.0
+- 使用 UV 作为包管理器
+- 配置清华源为默认 PyPI 源
 
-## 扩展功能
+### 3. README.md - 项目文档
 
-### 添加新工具
+**功能**：提供项目概述、功能介绍和使用指南
 
-要添加新的数学工具，只需使用 `@mcp.tool()` 装饰器：
+**内容概览**：
+- 功能特性分类介绍
+- 安装和运行说明
+- 使用示例
+- 扩展功能指导
+- 注意事项和错误处理
+- 测试方法
 
-```python
-@mcp.tool()
-def fibonacci(n: int) -> int:
-    """计算斐波那契数"""
-    if n <= 1:
-        return n
-    return fibonacci(n-1) + fibonacci(n-2)
-```
+### 4. .gitignore - Git 忽略配置
 
-### 添加新资源
+**功能**：指定 Git 版本控制系统应忽略的文件
 
-使用 `@mcp.resource()` 装饰器添加新的数学资源：
+**包含内容**：
+- Python 生成的文件 (__pycache__, *.pyo, *.pyd)
+- 构建和分发目录 (build/, dist/, wheels/)
+- 虚拟环境 (.venv)
+- 项目特定的测试和调试文件
 
-```python
-@mcp.resource("math:formula/{formula_name}")
-def get_formula(formula_name: str) -> dict:
-    """获取数学公式"""
-    # 实现获取公式的逻辑
-    pass
-```
+### 5. .python-version - Python 版本要求
 
-## 注意事项
+**功能**：指定项目所需的 Python 版本
 
-1. 所有角度输入都是**角度制**，不是弧度制
-2. 除法运算会检查除数是否为零
-3. 平方根和对数运算会检查定义域
-4. 阶乘计算限制了最大值为170，避免数值溢出
-5. 三角函数的值域检查，避免返回无穷大
+**当前设置**：>=3.12
 
-## 错误处理
+### 6. uv.lock - 依赖锁定文件
 
-服务器对各种边界情况进行了检查，包括：
+**功能**：锁定项目依赖的确切版本，确保环境一致性
 
-- 除数为零
-- 负数平方根
-- 无效的对数参数
-- 超出范围的三角函数输入
-- 空列表的统计运算
+### 7. cute_message.txt - 示例文件
 
-## 测试
+**功能**：包含一个可爱消息的示例文件，用于测试提交和推送功能
 
-运行测试脚本验证功能：
+## 技术栈
 
-```bash
-python debug_main.py
-```
+- **编程语言**：Python 3.12+
+- **框架**：MCP (Model Context Protocol) with FastMCP
+- **包管理器**：UV
+- **版本控制**：Git
+- **密钥管理**：GPG 签名验证
+
+## 特色功能
+
+1. **全面的数学工具集**：从基础运算到高级数学函数
+2. **安全表达式计算**：支持复杂数学表达式的安全计算
+3. **资源访问**：提供数学常量的结构化访问
+4. **提示生成**：为数学问题提供解题思路和证明方法
+5. **错误处理**：完善的边界条件检查和错误提示
+6. **类型安全**：使用 Python 类型提示确保接口一致性
+
+## 开发状态
+
+- 项目已完成基本功能开发
+- 配置了 GPG 签名验证
+- 支持代码推送和版本控制
+- 可以通过 MCP 协议提供数学计算服务
