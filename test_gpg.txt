@@ -1,0 +1,1 @@
+Test commit with current GPG key
