@@ -1,0 +1,23 @@
+[project]
+name = "open-math-mcps"
+version = "0.1.1"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "K-Summer", email = "91466399+K-Summer@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "mcp[cli]>=1.26.0",
+]
+
+[project.scripts]
+open-math-mcps = "open_math_mcps:main"
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+
+[build-system]
+requires = ["uv_build>=0.10.3,<0.11.0"]
+build-backend = "uv_build"
