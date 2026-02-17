@@ -1,6 +1,6 @@
 # 数学计算 MCP 服务器
 
-这是一个专门用于数学计算的 Model Context Protocol (MCP) 服务器。
+这是一个专门用于数学计算的 (MCP) 服务器。
 
 ## 功能特性
 

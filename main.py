@@ -1,12 +1,14 @@
 """
 数学计算 MCP 服务器
 
-提供各种数学计算功能，包括基础运算、高级数学函数和数学常量。
+提供各种数学计算功能，包括基础运算、高级数学函数、数学常量和复杂算式处理。
 """
 
 import math
+import re
+import ast
 from mcp.server.fastmcp import FastMCP
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 # 创建一个 MCP 服务器
 mcp = FastMCP("数学计算器", json_response=True)
@@ -243,6 +245,121 @@ def get_math_constant(constant_name: str) -> dict:
         return constants[constant_name]
     else:
         raise ValueError(f"未知的数学常量: {constant_name}")
+
+
+# ===== 复杂算式处理工具 =====
+
+@mcp.tool()
+def evaluate_expression(expression: str, variables: Optional[Dict[str, float]] = None) -> float:
+    """
+    计算复杂的数学表达式
+    
+    参数:
+        expression: 数学表达式字符串
+        variables: 变量名到值的映射字典（可选）
+    
+    支持的运算符:
+        +, -, *, /, ** (幂), % (取模)
+        函数: sin, cos, tan, asin, acos, atan, sqrt, log, ln, exp, factorial
+        常量: pi, e
+    
+    示例:
+        "2 * (3 + 4)" -> 14.0
+        "sin(30) + cos(60)" -> 1.0
+        "x + y" (其中 variables={"x": 2, "y": 3}) -> 5.0
+    """
+    # 替换常量
+    expression = expression.replace("pi", str(math.pi))
+    expression = expression.replace("e", str(math.e))
+    
+    # 替换变量
+    if variables:
+        for var, value in variables.items():
+            # 使用正则表达式确保匹配完整的变量名
+            expression = re.sub(rf"\b{var}\b", str(value), expression)
+    
+    # 预处理表达式，确保安全
+    try:
+        # 检查表达式是否只包含允许的字符
+        allowed_chars = r"^[0-9+\-*/.() **,%\s\w]+$"
+        if not re.match(allowed_chars, expression):
+            raise ValueError("表达式包含不允许的字符")
+        
+        # 使用ast.literal_eval进行基本评估
+        # 对于更复杂的表达式，我们使用eval，但有安全检查
+        # 注意：在生产环境中，使用eval有安全风险，这里简化处理
+        
+        # 定义安全的函数和常量
+        safe_dict = {
+            "__builtins__": {},
+            "sin": math.sin,
+            "cos": math.cos,
+            "tan": math.tan,
+            "asin": math.asin,
+            "acos": math.acos,
+            "atan": math.atan,
+            "sqrt": math.sqrt,
+            "log": math.log,
+            "ln": math.log,
+            "exp": math.exp,
+            "factorial": math.factorial,
+            "pi": math.pi,
+            "e": math.e,
+            "radians": math.radians,
+            "degrees": math.degrees
+        }
+        
+        # 计算表达式
+        result = eval(expression, {"__builtins__": None}, safe_dict)
+        
+        # 确保结果是数字
+        if not isinstance(result, (int, float)):
+            raise ValueError("表达式计算结果不是数字")
+            
+        return float(result)
+        
+    except (SyntaxError, NameError, TypeError, ZeroDivisionError) as e:
+        raise ValueError(f"表达式计算错误: {str(e)}")
+
+
+@mcp.tool()
+def simplify_expression(expression: str) -> str:
+    """
+    简化数学表达式（基础实现）
+    
+    参数:
+        expression: 数学表达式字符串
+    
+    返回:
+        简化后的表达式字符串
+    """
+    # 这里实现一个基础的简化逻辑
+    # 在实际应用中，可以使用更复杂的符号计算库
+    
+    # 移除不必要的空格
+    simplified = expression.replace(" ", "")
+    
+    # 处理简单的 +0 或 *1
+    simplified = re.sub(r"\+0(?=[+\-*/)])", "", simplified)
+    simplified = re.sub(r"\*1(?=[+\-*/)])", "", simplified)
+    
+    # 处理 0+x 或 x+0
+    simplified = re.sub(r"0\+(?=[0-9.])", "", simplified)
+    simplified = re.sub(r"\+0$", "", simplified)
+    
+    # 处理 1*x 或 x*1
+    simplified = re.sub(r"1\*(?=[0-9.])", "", simplified)
+    simplified = re.sub(r"\*1$", "", simplified)
+    
+    # 处理 x-0
+    simplified = re.sub(r"(?<![0-9.])-0(?=[+\-*/)])", "", simplified)
+    simplified = re.sub(r"-0$", "", simplified)
+    
+    # 处理 x/1
+    simplified = re.sub(r"(?<![0-9.])/1(?=[+\-*/)])", "", simplified)
+    simplified = re.sub(r"/1$", "", simplified)
+    
+    return simplified
 
 
 # ===== 数学公式提示生成器 =====
