@@ -2,167 +2,822 @@
 数学计算 MCP 服务器
 
 提供各种数学计算功能，包括基础运算、高级数学函数、数学常量和复杂算式处理。
+支持高精度计算、矩阵运算、微积分等高级功能。
 """
 
 import math
 import re
 import ast
+import decimal
+import time
+import json
+import numpy as np
+from typing import List, Optional, Dict, Any, Union, Tuple
 from mcp.server.fastmcp import FastMCP
-from typing import List, Optional, Dict, Any
+from functools import lru_cache
+from dataclasses import dataclass
+from enum import Enum
 
 # 创建一个 MCP 服务器
 mcp = FastMCP("数学计算器", json_response=True)
 
+# 全局配置
+class PrecisionMode(Enum):
+    STANDARD = "standard"  # 标准精度（默认）
+    HIGH = "high"          # 高精度（使用decimal）
+    EXTREME = "extreme"    # 极高精度（使用mpmath，如果可用）
 
-# ===== 基础数学运算工具 =====
+# 计算缓存
+calculation_cache = {}
+cache_enabled = True
+cache_ttl = 3600  # 缓存时间（秒）
+
+# 计算历史
+calculation_history = []
+max_history_size = 100
+
+@dataclass
+class CalculationResult:
+    """计算结果数据类"""
+    tool: str
+    parameters: Dict[str, Any]
+    result: Any
+    timestamp: float
+    precision: str = "standard"
+    execution_time: float = 0.0
+    cache_hit: bool = False
+
+def get_precision_context(precision_mode: PrecisionMode = PrecisionMode.STANDARD, 
+                         decimal_places: int = 15) -> Optional[decimal.Context]:
+    """获取精度上下文"""
+    if precision_mode == PrecisionMode.HIGH:
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        return ctx
+    return None
+
+def cache_key(tool_name: str, params: Dict) -> str:
+    """生成缓存键"""
+    return f"{tool_name}:{json.dumps(params, sort_keys=True)}"
+
+def add_to_history(result: CalculationResult):
+    """添加到历史记录"""
+    calculation_history.append(result)
+    if len(calculation_history) > max_history_size:
+        calculation_history.pop(0)
+
+def format_error(error_type: str, message: str, suggestion: str = "", 
+                valid_range: str = "") -> Dict:
+    """格式化错误信息"""
+    return {
+        "error": {
+            "code": error_type,
+            "message": message,
+            "suggestion": suggestion,
+            "valid_range": valid_range,
+            "timestamp": time.time()
+        }
+    }
+
+
+# ===== 基础数学运算工具（带高精度支持） =====
 
 @mcp.tool()
-def add(a: float, b: float) -> float:
-    """两个数相加"""
-    return a + b
+def add(a: float, b: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """两个数相加
+    
+    参数:
+        a: 第一个数
+        b: 第二个数
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        result = decimal.Decimal(str(a)) + decimal.Decimal(str(b))
+    else:
+        result = a + b
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="add",
+        parameters={"a": a, "b": b, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def subtract(a: float, b: float) -> float:
-    """两个数相减"""
-    return a - b
+def subtract(a: float, b: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """两个数相减
+    
+    参数:
+        a: 第一个数
+        b: 第二个数
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        result = decimal.Decimal(str(a)) - decimal.Decimal(str(b))
+    else:
+        result = a - b
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="subtract",
+        parameters={"a": a, "b": b, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def multiply(a: float, b: float) -> float:
-    """两个数相乘"""
-    return a * b
+def multiply(a: float, b: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """两个数相乘
+    
+    参数:
+        a: 第一个数
+        b: 第二个数
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        result = decimal.Decimal(str(a)) * decimal.Decimal(str(b))
+    else:
+        result = a * b
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="multiply",
+        parameters={"a": a, "b": b, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def divide(a: float, b: float) -> float:
-    """两个数相除"""
+def divide(a: float, b: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """两个数相除
+    
+    参数:
+        a: 被除数
+        b: 除数
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
     if b == 0:
-        raise ValueError("除数不能为零")
-    return a / b
+        error_info = format_error(
+            "DIVISION_BY_ZERO",
+            "除数不能为零",
+            "请检查除数是否为0",
+            "b ≠ 0"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        result = decimal.Decimal(str(a)) / decimal.Decimal(str(b))
+    else:
+        result = a / b
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="divide",
+        parameters={"a": a, "b": b, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
-# ===== 高级数学运算工具 =====
+# ===== 高级数学运算工具（带改进的错误处理） =====
 
 @mcp.tool()
-def power(base: float, exponent: float) -> float:
-    """计算幂"""
-    return math.pow(base, exponent)
+def power(base: float, exponent: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算幂
+    
+    参数:
+        base: 底数
+        exponent: 指数
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        result = decimal.Decimal(str(base)) ** decimal.Decimal(str(exponent))
+    else:
+        result = math.pow(base, exponent)
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="power",
+        parameters={"base": base, "exponent": exponent, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def sqrt(number: float) -> float:
-    """计算平方根"""
+def sqrt(number: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算平方根
+    
+    参数:
+        number: 要计算平方根的数
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
     if number < 0:
-        raise ValueError("不能计算负数的平方根")
-    return math.sqrt(number)
+        error_info = format_error(
+            "NEGATIVE_SQUARE_ROOT",
+            "不能计算负数的平方根",
+            "请确保输入的数是非负数",
+            "number ≥ 0"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        result = decimal.Decimal(str(number)).sqrt()
+    else:
+        result = math.sqrt(number)
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="sqrt",
+        parameters={"number": number, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def cbrt(number: float) -> float:
-    """计算立方根"""
-    return number ** (1/3)
+def cbrt(number: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算立方根
+    
+    参数:
+        number: 要计算立方根的数
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        # 立方根计算：x^(1/3)
+        result = decimal.Decimal(str(number)) ** (decimal.Decimal('1') / decimal.Decimal('3'))
+    else:
+        result = number ** (1/3)
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="cbrt",
+        parameters={"number": number, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def log(number: float, base: float = math.e) -> float:
-    """计算对数"""
+def log(number: float, base: float = math.e, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算对数
+    
+    参数:
+        number: 真数
+        base: 底数（默认为e）
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
     if number <= 0:
-        raise ValueError("对数的真数必须大于零")
+        error_info = format_error(
+            "INVALID_LOG_ARGUMENT",
+            "对数的真数必须大于零",
+            "请确保输入的数大于0",
+            "number > 0"
+        )
+        raise ValueError(json.dumps(error_info))
+    
     if base <= 0 or base == 1:
-        raise ValueError("对数的底数必须大于零且不等于1")
-    return math.log(number, base)
+        error_info = format_error(
+            "INVALID_LOG_BASE",
+            "对数的底数必须大于零且不等于1",
+            "请确保底数大于0且不等于1",
+            "base > 0 and base ≠ 1"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        # 使用换底公式：log_b(a) = ln(a) / ln(b)
+        a = decimal.Decimal(str(number))
+        b = decimal.Decimal(str(base))
+        result = a.ln() / b.ln()
+    else:
+        result = math.log(number, base)
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="log",
+        parameters={"number": number, "base": base, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def ln(number: float) -> float:
-    """计算自然对数"""
-    return log(number, math.e)
+def ln(number: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算自然对数
+    
+    参数:
+        number: 真数
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    return log(number, math.e, precision, decimal_places)
 
 
 @mcp.tool()
-def exp(number: float) -> float:
-    """计算指数函数 e^x"""
-    return math.exp(number)
+def exp(number: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算指数函数 e^x
+    
+    参数:
+        number: 指数
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        result = decimal.Decimal(str(number)).exp()
+    else:
+        result = math.exp(number)
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="exp",
+        parameters={"number": number, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def sin(angle: float) -> float:
-    """计算正弦值（角度制）"""
-    return math.sin(math.radians(angle))
+def sin(angle: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算正弦值（角度制）
+    
+    参数:
+        angle: 角度（度）
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        # 使用math.sin计算，然后转换为decimal
+        result = decimal.Decimal(str(math.sin(math.radians(angle))))
+    else:
+        result = math.sin(math.radians(angle))
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="sin",
+        parameters={"angle": angle, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def cos(angle: float) -> float:
-    """计算余弦值（角度制）"""
-    return math.cos(math.radians(angle))
+def cos(angle: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算余弦值（角度制）
+    
+    参数:
+        angle: 角度（度）
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        # 使用math.cos计算，然后转换为decimal
+        result = decimal.Decimal(str(math.cos(math.radians(angle))))
+    else:
+        result = math.cos(math.radians(angle))
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="cos",
+        parameters={"angle": angle, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def tan(angle: float) -> float:
-    """计算正切值（角度制）"""
-    result = math.tan(math.radians(angle))
-    if abs(result) > 1e15:
-        raise ValueError("正切值超出范围")
-    return result
+def tan(angle: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算正切值（角度制）
+    
+    参数:
+        angle: 角度（度）
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        # 使用math.tan计算，然后转换为decimal
+        result = decimal.Decimal(str(math.tan(math.radians(angle))))
+    else:
+        result = math.tan(math.radians(angle))
+    
+    if abs(float(result)) > 1e15:
+        error_info = format_error(
+            "TANGENT_OVERFLOW",
+            "正切值超出范围",
+            "角度接近90度的奇数倍，正切值趋于无穷大",
+            "angle ≠ 90° + k·180° (k为整数)"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="tan",
+        parameters={"angle": angle, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def asin(value: float) -> float:
-    """计算反正弦值（返回角度制）"""
+def asin(value: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算反正弦值（返回角度制）
+    
+    参数:
+        value: 正弦值（-1到1之间）
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
     if abs(value) > 1:
-        raise ValueError("反正弦的输入值必须在-1到1之间")
-    return math.degrees(math.asin(value))
+        error_info = format_error(
+            "INVALID_ARCSIN_ARGUMENT",
+            "反正弦的输入值必须在-1到1之间",
+            "请确保输入值在-1到1范围内",
+            "-1 ≤ value ≤ 1"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        # 使用math.asin计算，然后转换为decimal
+        result = decimal.Decimal(str(math.degrees(math.asin(value))))
+    else:
+        result = math.degrees(math.asin(value))
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="asin",
+        parameters={"value": value, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def acos(value: float) -> float:
-    """计算反余弦值（返回角度制）"""
+def acos(value: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算反余弦值（返回角度制）
+    
+    参数:
+        value: 余弦值（-1到1之间）
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
     if abs(value) > 1:
-        raise ValueError("反余弦的输入值必须在-1到1之间")
-    return math.degrees(math.acos(value))
+        error_info = format_error(
+            "INVALID_ARCCOS_ARGUMENT",
+            "反余弦的输入值必须在-1到1之间",
+            "请确保输入值在-1到1范围内",
+            "-1 ≤ value ≤ 1"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        # 使用math.acos计算，然后转换为decimal
+        result = decimal.Decimal(str(math.degrees(math.acos(value))))
+    else:
+        result = math.degrees(math.acos(value))
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="acos",
+        parameters={"value": value, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def atan(value: float) -> float:
-    """计算反正切值（返回角度制）"""
-    return math.degrees(math.atan(value))
+def atan(value: float, precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算反正切值（返回角度制）
+    
+    参数:
+        value: 正切值
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        # 计算反正切（弧度）然后转换为角度
+        # 使用math.atan计算反正切，然后转换为decimal
+        radians = decimal.Decimal(str(math.atan(value)))
+        result = radians * decimal.Decimal('180') / decimal.Decimal(str(math.pi))
+    else:
+        result = math.degrees(math.atan(value))
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="atan",
+        parameters={"value": value, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def factorial(n: int) -> int:
-    """计算阶乘"""
+def factorial(n: int, precision: str = "standard") -> Union[int, decimal.Decimal]:
+    """计算阶乘
+    
+    参数:
+        n: 非负整数
+        precision: 精度模式 (standard/high)
+    """
+    start_time = time.time()
+    
     if n < 0:
-        raise ValueError("阶乘只能计算非负整数")
-    if n > 170:
-        raise ValueError("阶乘值太大，超出计算范围")
-    return math.factorial(n)
+        error_info = format_error(
+            "NEGATIVE_FACTORIAL",
+            "阶乘只能计算非负整数",
+            "请确保输入的是非负整数",
+            "n ≥ 0"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    if n > 170 and precision == "standard":
+        error_info = format_error(
+            "FACTORIAL_OVERFLOW",
+            "阶乘值太大，超出标准精度计算范围",
+            "请使用高精度模式或减小输入值",
+            "n ≤ 170 (标准模式)"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=100)  # 高精度阶乘需要更多位数
+        decimal.setcontext(ctx)
+        result = decimal.Decimal(1)
+        for i in range(1, n + 1):
+            result *= decimal.Decimal(str(i))
+    else:
+        result = math.factorial(n)
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="factorial",
+        parameters={"n": n, "precision": precision},
+        result=int(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return int(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def combination(n: int, r: int) -> int:
-    """计算组合数 C(n, r)"""
+def combination(n: int, r: int, precision: str = "standard") -> Union[int, decimal.Decimal]:
+    """计算组合数 C(n, r)
+    
+    参数:
+        n: 总数
+        r: 选择数
+        precision: 精度模式 (standard/high)
+    """
+    start_time = time.time()
+    
     if n < 0 or r < 0 or r > n:
-        raise ValueError("组合数参数无效")
-    return math.comb(n, r)
+        error_info = format_error(
+            "INVALID_COMBINATION",
+            "组合数参数无效",
+            "请确保 n ≥ 0, r ≥ 0, 且 r ≤ n",
+            "n ≥ 0, r ≥ 0, r ≤ n"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    if precision == "high":
+        # 使用公式 C(n, r) = n! / (r! * (n-r)!)
+        n_fact = factorial(n, "high")
+        r_fact = factorial(r, "high")
+        n_r_fact = factorial(n - r, "high")
+        result = n_fact / (r_fact * n_r_fact)
+    else:
+        result = math.comb(n, r)
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="combination",
+        parameters={"n": n, "r": r, "precision": precision},
+        result=int(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return int(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
-def permutation(n: int, r: int) -> int:
-    """计算排列数 P(n, r)"""
+def permutation(n: int, r: int, precision: str = "standard") -> Union[int, decimal.Decimal]:
+    """计算排列数 P(n, r)
+    
+    参数:
+        n: 总数
+        r: 选择数
+        precision: 精度模式 (standard/high)
+    """
+    start_time = time.time()
+    
     if n < 0 or r < 0 or r > n:
-        raise ValueError("排列数参数无效")
-    return math.perm(n, r)
+        error_info = format_error(
+            "INVALID_PERMUTATION",
+            "排列数参数无效",
+            "请确保 n ≥ 0, r ≥ 0, 且 r ≤ n",
+            "n ≥ 0, r ≥ 0, r ≤ n"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    if precision == "high":
+        # 使用公式 P(n, r) = n! / (n-r)!
+        n_fact = factorial(n, "high")
+        n_r_fact = factorial(n - r, "high")
+        result = n_fact / n_r_fact
+    else:
+        result = math.perm(n, r)
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="permutation",
+        parameters={"n": n, "r": r, "precision": precision},
+        result=int(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return int(result) if isinstance(result, decimal.Decimal) else result
 
 
 # ===== 统计学工具 =====
 
 @mcp.tool()
-def mean(numbers: List[float]) -> float:
-    """计算平均值"""
+def mean(numbers: List[float], precision: str = "standard", decimal_places: int = 15) -> Union[float, decimal.Decimal]:
+    """计算平均值
+    
+    参数:
+        numbers: 数字列表
+        precision: 精度模式 (standard/high)
+        decimal_places: 高精度模式下的小数位数
+    """
+    start_time = time.time()
+    
     if not numbers:
-        raise ValueError("列表不能为空")
-    return sum(numbers) / len(numbers)
+        error_info = format_error(
+            "EMPTY_LIST",
+            "列表不能为空",
+            "请提供至少一个数字",
+            "len(numbers) > 0"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    if precision == "high":
+        ctx = decimal.Context(prec=decimal_places)
+        decimal.setcontext(ctx)
+        total = decimal.Decimal('0')
+        for num in numbers:
+            total += decimal.Decimal(str(num))
+        result = total / decimal.Decimal(str(len(numbers)))
+    else:
+        result = sum(numbers) / len(numbers)
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="mean",
+        parameters={"numbers": numbers, "precision": precision, "decimal_places": decimal_places},
+        result=float(result) if isinstance(result, decimal.Decimal) else result,
+        timestamp=time.time(),
+        precision=precision,
+        execution_time=time.time() - start_time
+    ))
+    
+    return float(result) if isinstance(result, decimal.Decimal) else result
 
 
 @mcp.tool()
@@ -439,6 +1094,611 @@ def angle_convert(angle: float, from_unit: str, to_unit: str) -> float:
         return radians
     else:
         raise ValueError("不支持的输出单位，请使用 'degree' 或 'radian'")
+
+
+# ===== 矩阵运算工具 =====
+
+@mcp.tool()
+def matrix_multiply(matrix_a: List[List[float]], matrix_b: List[List[float]]) -> List[List[float]]:
+    """矩阵乘法
+    
+    参数:
+        matrix_a: 第一个矩阵 (m x n)
+        matrix_b: 第二个矩阵 (n x p)
+    
+    返回:
+        结果矩阵 (m x p)
+    """
+    start_time = time.time()
+    
+    # 检查矩阵维度
+    rows_a = len(matrix_a)
+    cols_a = len(matrix_a[0]) if rows_a > 0 else 0
+    rows_b = len(matrix_b)
+    cols_b = len(matrix_b[0]) if rows_b > 0 else 0
+    
+    if cols_a != rows_b:
+        error_info = format_error(
+            "MATRIX_DIMENSION_MISMATCH",
+            "矩阵维度不匹配，无法相乘",
+            f"矩阵A的列数({cols_a})必须等于矩阵B的行数({rows_b})",
+            f"cols_a = {cols_a}, rows_b = {rows_b}"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    # 使用numpy进行矩阵乘法
+    try:
+        result = np.dot(matrix_a, matrix_b).tolist()
+    except Exception as e:
+        error_info = format_error(
+            "MATRIX_MULTIPLICATION_ERROR",
+            f"矩阵乘法失败: {str(e)}",
+            "请检查矩阵数据是否正确",
+            ""
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="matrix_multiply",
+        parameters={"matrix_a": matrix_a, "matrix_b": matrix_b},
+        result=result,
+        timestamp=time.time(),
+        execution_time=time.time() - start_time
+    ))
+    
+    return result
+
+
+@mcp.tool()
+def matrix_determinant(matrix: List[List[float]]) -> float:
+    """计算矩阵的行列式
+    
+    参数:
+        matrix: 方阵 (n x n)
+    
+    返回:
+        行列式值
+    """
+    start_time = time.time()
+    
+    # 检查是否为方阵
+    rows = len(matrix)
+    if rows == 0:
+        error_info = format_error(
+            "EMPTY_MATRIX",
+            "矩阵不能为空",
+            "请提供非空矩阵",
+            "len(matrix) > 0"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    for row in matrix:
+        if len(row) != rows:
+            error_info = format_error(
+                "NON_SQUARE_MATRIX",
+                "矩阵必须是方阵",
+                f"矩阵行数({rows})必须等于列数({len(row)})",
+                f"rows = {rows}, cols = {len(row)}"
+            )
+            raise ValueError(json.dumps(error_info))
+    
+    # 使用numpy计算行列式
+    try:
+        result = float(np.linalg.det(matrix))
+    except Exception as e:
+        error_info = format_error(
+            "DETERMINANT_CALCULATION_ERROR",
+            f"行列式计算失败: {str(e)}",
+            "请检查矩阵数据是否正确",
+            ""
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="matrix_determinant",
+        parameters={"matrix": matrix},
+        result=result,
+        timestamp=time.time(),
+        execution_time=time.time() - start_time
+    ))
+    
+    return result
+
+
+@mcp.tool()
+def matrix_inverse(matrix: List[List[float]]) -> List[List[float]]:
+    """计算矩阵的逆矩阵
+    
+    参数:
+        matrix: 可逆方阵 (n x n)
+    
+    返回:
+        逆矩阵
+    """
+    start_time = time.time()
+    
+    # 检查是否为方阵
+    rows = len(matrix)
+    if rows == 0:
+        error_info = format_error(
+            "EMPTY_MATRIX",
+            "矩阵不能为空",
+            "请提供非空矩阵",
+            "len(matrix) > 0"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    for row in matrix:
+        if len(row) != rows:
+            error_info = format_error(
+                "NON_SQUARE_MATRIX",
+                "矩阵必须是方阵",
+                f"矩阵行数({rows})必须等于列数({len(row)})",
+                f"rows = {rows}, cols = {len(row)}"
+            )
+            raise ValueError(json.dumps(error_info))
+    
+    # 使用numpy计算逆矩阵
+    try:
+        result = np.linalg.inv(matrix).tolist()
+    except np.linalg.LinAlgError:
+        error_info = format_error(
+            "SINGULAR_MATRIX",
+            "矩阵不可逆（奇异矩阵）",
+            "请检查矩阵是否满秩",
+            "det(matrix) ≠ 0"
+        )
+        raise ValueError(json.dumps(error_info))
+    except Exception as e:
+        error_info = format_error(
+            "MATRIX_INVERSE_ERROR",
+            f"逆矩阵计算失败: {str(e)}",
+            "请检查矩阵数据是否正确",
+            ""
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="matrix_inverse",
+        parameters={"matrix": matrix},
+        result=result,
+        timestamp=time.time(),
+        execution_time=time.time() - start_time
+    ))
+    
+    return result
+
+
+@mcp.tool()
+def matrix_transpose(matrix: List[List[float]]) -> List[List[float]]:
+    """计算矩阵的转置
+    
+    参数:
+        matrix: 矩阵 (m x n)
+    
+    返回:
+        转置矩阵 (n x m)
+    """
+    start_time = time.time()
+    
+    if not matrix:
+        error_info = format_error(
+            "EMPTY_MATRIX",
+            "矩阵不能为空",
+            "请提供非空矩阵",
+            "len(matrix) > 0"
+        )
+        raise ValueError(json.dumps(error_info))
+    
+    # 计算转置
+    result = [[matrix[j][i] for j in range(len(matrix))] for i in range(len(matrix[0]))]
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="matrix_transpose",
+        parameters={"matrix": matrix},
+        result=result,
+        timestamp=time.time(),
+        execution_time=time.time() - start_time
+    ))
+    
+    return result
+
+
+# ===== 微积分工具 =====
+
+@mcp.tool()
+def differentiate(expression: str, variable: str = "x", point: Optional[float] = None) -> Union[str, float]:
+    """计算函数的导数
+    
+    参数:
+        expression: 函数表达式字符串
+        variable: 求导变量（默认为'x'）
+        point: 求导点（如果提供，则计算该点的导数值）
+    
+    返回:
+        导数表达式或导数值
+    """
+    start_time = time.time()
+    
+    # 这里实现一个基础的数值微分
+    # 在实际应用中，可以使用sympy等符号计算库
+    
+    if point is not None:
+        # 数值微分：使用中心差分法
+        h = 1e-6
+        try:
+            # 计算f(x+h)和f(x-h)
+            variables_plus = {variable: point + h}
+            variables_minus = {variable: point - h}
+            
+            # 使用现有的evaluate_expression函数
+            f_plus = evaluate_expression(expression, variables_plus)
+            f_minus = evaluate_expression(expression, variables_minus)
+            
+            result = (f_plus - f_minus) / (2 * h)
+        except Exception as e:
+            error_info = format_error(
+                "DIFFERENTIATION_ERROR",
+                f"数值微分失败: {str(e)}",
+                "请检查表达式和求导点",
+                ""
+            )
+            raise ValueError(json.dumps(error_info))
+        
+        # 记录到历史
+        add_to_history(CalculationResult(
+            tool="differentiate",
+            parameters={"expression": expression, "variable": variable, "point": point},
+            result=result,
+            timestamp=time.time(),
+            execution_time=time.time() - start_time
+        ))
+        
+        return result
+    else:
+        # 返回导数表达式（简化版）
+        # 注意：这是一个非常基础的实现，仅支持简单表达式
+        derivative = f"d/d{variable}({expression})"
+        
+        # 记录到历史
+        add_to_history(CalculationResult(
+            tool="differentiate",
+            parameters={"expression": expression, "variable": variable, "point": None},
+            result=derivative,
+            timestamp=time.time(),
+            execution_time=time.time() - start_time
+        ))
+        
+        return derivative
+
+
+@mcp.tool()
+def integrate(expression: str, variable: str = "x", 
+              lower_limit: Optional[float] = None, 
+              upper_limit: Optional[float] = None) -> Union[str, float]:
+    """计算函数的积分
+    
+    参数:
+        expression: 函数表达式字符串
+        variable: 积分变量（默认为'x'）
+        lower_limit: 积分下限（如果提供，则计算定积分）
+        upper_limit: 积分上限（如果提供，则计算定积分）
+    
+    返回:
+        积分表达式或积分值
+    """
+    start_time = time.time()
+    
+    if lower_limit is not None and upper_limit is not None:
+        # 数值积分：使用辛普森法则
+        try:
+            # 使用数值积分
+            n = 1000  # 分割数
+            a = lower_limit
+            b = upper_limit
+            h = (b - a) / n
+            
+            # 计算函数值
+            total = 0
+            for i in range(n + 1):
+                x = a + i * h
+                variables = {variable: x}
+                fx = evaluate_expression(expression, variables)
+                
+                if i == 0 or i == n:
+                    total += fx
+                elif i % 2 == 1:
+                    total += 4 * fx
+                else:
+                    total += 2 * fx
+            
+            result = total * h / 3
+        except Exception as e:
+            error_info = format_error(
+                "INTEGRATION_ERROR",
+                f"数值积分失败: {str(e)}",
+                "请检查表达式和积分限",
+                ""
+            )
+            raise ValueError(json.dumps(error_info))
+        
+        # 记录到历史
+        add_to_history(CalculationResult(
+            tool="integrate",
+            parameters={"expression": expression, "variable": variable, 
+                       "lower_limit": lower_limit, "upper_limit": upper_limit},
+            result=result,
+            timestamp=time.time(),
+            execution_time=time.time() - start_time
+        ))
+        
+        return result
+    else:
+        # 返回积分表达式
+        integral = f"∫{expression} d{variable}"
+        
+        # 记录到历史
+        add_to_history(CalculationResult(
+            tool="integrate",
+            parameters={"expression": expression, "variable": variable, 
+                       "lower_limit": None, "upper_limit": None},
+            result=integral,
+            timestamp=time.time(),
+            execution_time=time.time() - start_time
+        ))
+        
+        return integral
+
+
+@mcp.tool()
+def solve_equation_numeric(equation: str, variable: str = "x", 
+                          initial_guess: float = 0.0, 
+                          tolerance: float = 1e-6, 
+                          max_iterations: int = 100) -> float:
+    """数值解方程（使用牛顿法）
+    
+    参数:
+        equation: 方程字符串（如 "x^2 - 4 = 0"）
+        variable: 变量名（默认为'x'）
+        initial_guess: 初始猜测值
+        tolerance: 容差
+        max_iterations: 最大迭代次数
+    
+    返回:
+        方程的根
+    """
+    start_time = time.time()
+    
+    # 解析方程：将方程转换为 f(x) = 0 的形式
+    if "=" in equation:
+        parts = equation.split("=")
+        if len(parts) != 2:
+            error_info = format_error(
+                "INVALID_EQUATION",
+                "方程格式无效",
+                "方程应包含一个等号，格式如 'x^2 - 4 = 0'",
+                "equation must contain exactly one '='"
+            )
+            raise ValueError(json.dumps(error_info))
+        
+        left_expr = parts[0].strip()
+        right_expr = parts[1].strip()
+        
+        # 转换为 f(x) = left - right = 0
+        expression = f"({left_expr}) - ({right_expr})"
+    else:
+        expression = equation
+    
+    # 牛顿法迭代
+    x = initial_guess
+    for i in range(max_iterations):
+        try:
+            # 计算f(x)
+            variables = {variable: x}
+            fx = evaluate_expression(expression, variables)
+            
+            # 计算f'(x)（数值微分）
+            h = 1e-6
+            variables_plus = {variable: x + h}
+            variables_minus = {variable: x - h}
+            fx_plus = evaluate_expression(expression, variables_plus)
+            fx_minus = evaluate_expression(expression, variables_minus)
+            fpx = (fx_plus - fx_minus) / (2 * h)
+            
+            if abs(fpx) < 1e-12:
+                error_info = format_error(
+                    "ZERO_DERIVATIVE",
+                    "导数为零，牛顿法失败",
+                    "请尝试不同的初始猜测值",
+                    f"f'({x}) ≈ 0"
+                )
+                raise ValueError(json.dumps(error_info))
+            
+            # 更新x
+            x_new = x - fx / fpx
+            
+            # 检查收敛
+            if abs(x_new - x) < tolerance:
+                x = x_new
+                break
+            
+            x = x_new
+        except Exception as e:
+            error_info = format_error(
+                "NEWTON_METHOD_ERROR",
+                f"牛顿法迭代失败: {str(e)}",
+                "请检查方程和初始猜测值",
+                ""
+            )
+            raise ValueError(json.dumps(error_info))
+    
+    # 记录到历史
+    add_to_history(CalculationResult(
+        tool="solve_equation_numeric",
+        parameters={"equation": equation, "variable": variable, 
+                   "initial_guess": initial_guess, "tolerance": tolerance, 
+                   "max_iterations": max_iterations},
+        result=x,
+        timestamp=time.time(),
+        execution_time=time.time() - start_time
+    ))
+    
+    return x
+
+
+# ===== 用户体验工具 =====
+
+@mcp.tool()
+def get_calculation_history(limit: int = 10) -> List[Dict]:
+    """获取计算历史
+    
+    参数:
+        limit: 返回的历史记录数量限制
+    
+    返回:
+        计算历史记录列表
+    """
+    # 返回最近的记录
+    recent_history = calculation_history[-limit:] if calculation_history else []
+    
+    # 转换为可序列化的字典
+    history_list = []
+    for result in recent_history:
+        history_list.append({
+            "tool": result.tool,
+            "parameters": result.parameters,
+            "result": result.result,
+            "timestamp": result.timestamp,
+            "precision": result.precision,
+            "execution_time": result.execution_time,
+            "cache_hit": result.cache_hit
+        })
+    
+    return history_list
+
+
+@mcp.tool()
+def clear_calculation_history() -> Dict:
+    """清空计算历史"""
+    calculation_history.clear()
+    return {"status": "success", "message": "计算历史已清空", "cleared_count": 0}
+
+
+@mcp.tool()
+def format_number(number: float, format_type: str = "decimal", 
+                 precision: int = 6, use_scientific: bool = False) -> str:
+    """格式化数字
+    
+    参数:
+        number: 要格式化的数字
+        format_type: 格式类型 (decimal/scientific/engineering)
+        precision: 精度（小数位数）
+        use_scientific: 是否使用科学计数法（当format_type为decimal时）
+    
+    返回:
+        格式化后的字符串
+    """
+    if format_type == "scientific":
+        return f"{number:.{precision}e}"
+    elif format_type == "engineering":
+        # 工程计数法：指数是3的倍数
+        exp = math.floor(math.log10(abs(number))) if number != 0 else 0
+        exp3 = exp - (exp % 3)
+        mantissa = number / (10 ** exp3)
+        return f"{mantissa:.{precision}f}e{exp3}"
+    else:
+        # decimal格式
+        if use_scientific and abs(number) > 1e6:
+            return f"{number:.{precision}e}"
+        else:
+            return f"{number:.{precision}f}"
+
+
+@mcp.tool()
+def batch_calculate(calculations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """批量计算
+    
+    参数:
+        calculations: 计算任务列表，每个任务包含:
+            - tool: 工具名称
+            - parameters: 工具参数
+    
+    返回:
+        计算结果列表
+    """
+    results = []
+    
+    for calc in calculations:
+        try:
+            tool_name = calc.get("tool")
+            params = calc.get("parameters", {})
+            
+            # 这里需要根据工具名称调用相应的函数
+            # 这是一个简化实现，实际应用中需要更复杂的路由逻辑
+            result = {
+                "tool": tool_name,
+                "parameters": params,
+                "status": "not_implemented",
+                "result": None,
+                "error": "批量计算功能需要进一步实现"
+            }
+            results.append(result)
+        except Exception as e:
+            results.append({
+                "tool": calc.get("tool", "unknown"),
+                "parameters": calc.get("parameters", {}),
+                "status": "error",
+                "result": None,
+                "error": str(e)
+            })
+    
+    return results
+
+
+@mcp.tool()
+def get_help(tool_name: str = "", detail_level: str = "basic") -> Dict[str, Any]:
+    """获取帮助信息
+    
+    参数:
+        tool_name: 工具名称（如果为空，则返回所有工具列表）
+        detail_level: 详细程度 (basic/advanced/expert)
+    
+    返回:
+        帮助信息
+    """
+    # 这里可以返回工具的使用说明
+    # 简化实现，返回基本信息
+    if not tool_name:
+        # 返回所有工具列表
+        tools = [
+            "add", "subtract", "multiply", "divide",
+            "power", "sqrt", "cbrt", "log", "ln", "exp",
+            "sin", "cos", "tan", "asin", "acos", "atan",
+            "factorial", "combination", "permutation",
+            "mean", "median", "mode", "variance", "standard_deviation",
+            "evaluate_expression", "simplify_expression",
+            "matrix_multiply", "matrix_determinant", "matrix_inverse", "matrix_transpose",
+            "differentiate", "integrate", "solve_equation_numeric",
+            "angle_convert", "format_number", "get_calculation_history"
+        ]
+        
+        return {
+            "available_tools": tools,
+            "total_tools": len(tools),
+            "detail_level": detail_level
+        }
+    else:
+        # 返回特定工具的帮助信息
+        return {
+            "tool": tool_name,
+            "description": f"工具 '{tool_name}' 的帮助信息",
+            "detail_level": detail_level,
+            "note": "详细的帮助信息需要进一步实现"
+        }
 
 def main() -> None:
     mcp.run(transport="stdio")
