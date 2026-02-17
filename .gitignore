@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# py
+test_main.py
+debug_test.py
+debug_test.pyc
+debug_log.json

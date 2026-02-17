@@ -5,12 +5,14 @@
 ## 功能特性
 
 ### 1. 基础数学运算
+
 - `add(a, b)` - 加法运算
 - `subtract(a, b)` - 减法运算
 - `multiply(a, b)` - 乘法运算
 - `divide(a, b)` - 除法运算
 
 ### 2. 高级数学运算
+
 - `power(base, exponent)` - 幂运算
 - `sqrt(number)` - 平方根
 - `cbrt(number)` - 立方根
@@ -24,6 +26,7 @@
 - `permutation(n, r)` - 排列数 P(n, r)
 
 ### 3. 统计学工具
+
 - `mean(numbers)` - 计算平均值
 - `median(numbers)` - 计算中位数
 - `mode(numbers)` - 计算众数
@@ -31,30 +34,36 @@
 - `standard_deviation(numbers)` - 计算标准差
 
 ### 4. 数学常量资源
+
 可以通过 `math:constant/{name}` 访问：
+
 - `pi` - 圆周率 π
 - `e` - 自然常数 e
 - `golden_ratio` - 黄金比例 φ
 - `sqrt_2` - 根号2 √2
 
 ### 5. 提示生成器
+
 - `solve_equation` - 生成解方程的提示
 - `prove_theorem` - 生成证明数学定理的提示
 - `create_graph` - 生成创建图形的提示
 
 ### 6. 单位转换
+
 - `angle_convert(angle, from_unit, to_unit)` - 角度单位转换（degree/radian）
 
 ## 使用方法
 
 ### 1. 安装依赖
+
 ```bash
 pip install mcp[cli]
 ```
 
 ### 2. 运行服务器
+
 ```bash
-python math_server.py
+python main.py
 ```
 
 ### 3. 使用工具示例
@@ -78,6 +87,7 @@ result = await client.call_resource("math:constant/pi", {})
 ## 扩展功能
 
 ### 添加新工具
+
 要添加新的数学工具，只需使用 `@mcp.tool()` 装饰器：
 
 ```python
@@ -90,6 +100,7 @@ def fibonacci(n: int) -> int:
 ```
 
 ### 添加新资源
+
 使用 `@mcp.resource()` 装饰器添加新的数学资源：
 
 ```python
@@ -111,6 +122,7 @@ def get_formula(formula_name: str) -> dict:
 ## 错误处理
 
 服务器对各种边界情况进行了检查，包括：
+
 - 除数为零
 - 负数平方根
 - 无效的对数参数
@@ -120,6 +132,7 @@ def get_formula(formula_name: str) -> dict:
 ## 测试
 
 运行测试脚本验证功能：
+
 ```bash
-python test_math_server.py
+python debug_main.py
 ```
