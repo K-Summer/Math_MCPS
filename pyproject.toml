@@ -1,7 +1,7 @@
 [project]
 name = "open-math-mcps"
-version = "0.1.2"
-description = "Add your description here"
+version = "0.1.3"
+description = "这是一个数学MCPS的Python库，提供了各种数学相关的功能和工具。"
 readme = "README.md"
 authors = [
     { name = "K-Summer", email = "91466399+K-Summer@users.noreply.github.com" }
@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "mcp[cli]>=1.26.0",
+    "numpy>=1.24.0",
 ]
 
 [project.scripts]
